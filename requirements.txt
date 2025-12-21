@@ -1,0 +1,16 @@
+torch
+numpy
+pandas
+scikit-learn
+python-dotenv
+requests
+polygon-api-client
+simfin
+pyarrow
+fastparquet
+faiss-cpu
+umap-learn
+plotly
+tqdm
+lxml
+beautifulsoup4
