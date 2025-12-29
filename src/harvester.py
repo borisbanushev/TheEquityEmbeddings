@@ -56,23 +56,54 @@ class DataHarvester:
 
     def fetch_simfin_data(self, tickers: List[str] = None):
         """
-        Fetch integrated fundamentals and metadata from SimFin.
+        Fetch base financial statements and metadata from SimFin.
+        Since the 'derived' dataset is not available (500 error), we load
+        the base statements (income, balance, cashflow) and will calculate
+        derived metrics in the FeatureEngineer.
         """
         logger.info(f"Fetching SimFin data...")
         try:
             # Load basic company info (metadata)
             companies = sf.load_companies(market='us')
-            
-            # Load derived ratios (Module A, B, C features)
-            derived = sf.load_derived(variant='annual', market='us')
-            
+            logger.info(f"Loaded {len(companies)} companies")
+
+            # Load base financial statements instead of derived dataset
+            logger.info("Loading income statements...")
+            income = sf.load_income(variant='annual', market='us')
+            logger.info(f"Loaded income statements: {income.shape}, index: {income.index.names}")
+
+            logger.info("Loading balance sheets...")
+            balance = sf.load_balance(variant='annual', market='us')
+            logger.info(f"Loaded balance sheets: {balance.shape}, index: {balance.index.names}")
+
+            logger.info("Loading cash flow statements...")
+            cashflow = sf.load_cashflow(variant='annual', market='us')
+            logger.info(f"Loaded cash flow statements: {cashflow.shape}, index: {cashflow.index.names}")
+
+            # Filter by tickers if specified
             if tickers:
-                companies = companies[companies['Ticker'].isin(tickers)]
-                derived = derived.loc[tickers]
-            
-            return derived, companies
+                logger.info(f"Filtering for {len(tickers)} tickers...")
+                # Ticker is the index of companies, not a column
+                companies = companies[companies.index.isin(tickers)]
+                # Filter financial statements by ticker (index level 0)
+                # The index is a MultiIndex with ('Ticker', 'Report Date')
+                income = income[income.index.get_level_values('Ticker').isin(tickers)]
+                balance = balance[balance.index.get_level_values('Ticker').isin(tickers)]
+                cashflow = cashflow[cashflow.index.get_level_values('Ticker').isin(tickers)]
+                logger.info(f"After filtering: companies={len(companies)}, income={income.shape}, balance={balance.shape}, cashflow={cashflow.shape}")
+
+            # Combine all statements into a single structure for easier access
+            financial_data = {
+                'income': income,
+                'balance': balance,
+                'cashflow': cashflow
+            }
+
+            return financial_data, companies
         except Exception as e:
             logger.error(f"Error fetching SimFin data: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             return None, None
 
     def fetch_polygon_price_history(self, ticker: str, multiplier: int, timespan: str, from_date: str, to_date: str):

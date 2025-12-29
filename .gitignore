@@ -1,1 +1,16 @@
 .env
+
+# Data files (too large for GitHub)
+data/simfin_cache/
+*.csv
+*.zip
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
